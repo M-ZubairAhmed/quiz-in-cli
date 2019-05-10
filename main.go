@@ -23,7 +23,7 @@ func shuffleQuiz(quiz []quizProblem) []quizProblem {
 	rand.Seed(time.Now().UnixNano())
 
 	rand.Shuffle(len(quiz), func(i, j int) {
-		quiz[i], quiz[j] = quiz[j], quiz[i] 
+		quiz[i], quiz[j] = quiz[j], quiz[i]
 	})
 
 	return quiz
@@ -46,7 +46,7 @@ func startQuiz(quiz []quizProblem) int {
 
 	for i := 0; i < len(quiz); i++ {
 		var answer string
-		fmt.Println(quiz[i].question)
+		fmt.Printf("QNo.%d: %s = ", i+1, quiz[i].question)
 		fmt.Scanf("%s\n", &answer)
 		if answer == quiz[i].answer {
 			score++
