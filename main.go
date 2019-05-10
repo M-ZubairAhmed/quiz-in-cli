@@ -4,8 +4,9 @@ import "flag"
 import "fmt"
 import "os"
 import "time"
-import "math/rand"
 import "encoding/csv"
+import "math/rand"
+import "strings"
 
 type quizProblem struct {
 	question string
@@ -41,15 +42,32 @@ func parseCSVFileToStruct(csvLines [][]string) []quizProblem {
 	return parsedCSVSlice
 }
 
-func startQuiz(quiz []quizProblem) int {
+func startQuiz(quiz []quizProblem, timerInput int) int {
 	var score int
 
+	fmt.Printf("Quiz is starting, time limit : %ds \n ", timerInput)
+	timer := time.NewTimer(time.Duration(timerInput) *  time.Second)
+
+	
+	quizloop:
 	for i := 0; i < len(quiz); i++ {
-		var answer string
 		fmt.Printf("QNo.%d: %s = ", i+1, quiz[i].question)
-		fmt.Scanf("%s\n", &answer)
-		if answer == quiz[i].answer {
-			score++
+		
+		answeringChannel := make(chan string)
+		go func(){
+			var answer string
+			fmt.Scanf("%s\n", &answer)
+			answeringChannel <- strings.TrimSpace(answer)		
+		}()
+
+		select{
+		case answerInput := <-answeringChannel:
+			if answerInput == quiz[i].answer {
+				score++
+			}
+		case <- timer.C :
+			fmt.Println("Times up!")
+			break quizloop
 		}
 	}
 
@@ -57,16 +75,17 @@ func startQuiz(quiz []quizProblem) int {
 }
 
 func main() {
-	// flag for user input csv file
 	csvFileNameInput := flag.String("csv", "problems.csv", "Name of the quiz source csv file")
+	timerInput := flag.Int("timer", 10, "Timer in seconds")
 	flag.Parse()
 
 	csvFile, errorInOpeningFile := os.Open(*csvFileNameInput)
 	if errorInOpeningFile != nil {
 		checkErrors(errorInOpeningFile, "Cannot open file")
 	}
+	defer csvFile.Close()
 
-	fmt.Println("Quiz loaded from file :", *csvFileNameInput)
+	fmt.Println("Loading file :", *csvFileNameInput)
 
 	csvReader := csv.NewReader(csvFile)
 	csvFileLines, errInParsingCSV := csvReader.ReadAll()
@@ -77,7 +96,7 @@ func main() {
 	quiz := parseCSVFileToStruct(csvFileLines)
 	quiz = shuffleQuiz(quiz)
 
-	score := startQuiz(quiz)
+	score := startQuiz(quiz, *timerInput)
 
 	fmt.Printf("You scored %d out of %d\n", score, len(quiz))
 
